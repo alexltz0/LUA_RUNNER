@@ -1,0 +1,4 @@
+lupa>=2.0
+rich>=13.0
+click>=8.1
+watchdog>=4.0

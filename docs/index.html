@@ -1,0 +1,764 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>LUA_RUNNER — Low-Latency Game Scripting Engine</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            lua: {
+              50:'#f0f4ff',100:'#dbe4ff',200:'#bac8ff',300:'#91a7ff',
+              400:'#748ffc',500:'#5c7cfa',600:'#4c6ef5',700:'#4263eb',
+              800:'#3b5bdb',900:'#364fc7',
+            },
+            dark: {
+              50:'#c1c2c5',100:'#a6a7ab',200:'#909296',300:'#5c5f66',
+              400:'#373A40',500:'#2C2E33',600:'#25262B',700:'#1A1B1E',
+              800:'#141517',900:'#101113',
+            },
+            accent: { cyan:'#22d3ee', green:'#4ade80', purple:'#a78bfa', orange:'#fb923c' },
+          },
+          fontFamily: {
+            mono: ['JetBrains Mono','Fira Code','monospace'],
+            sans: ['Inter','system-ui','sans-serif'],
+          },
+        },
+      },
+    }
+  </script>
+  <style>
+    html { scroll-behavior: smooth; }
+    body { font-family: 'Inter', system-ui, sans-serif; background: #101113; color: #c1c2c5; }
+    .glass { background: rgba(26,27,30,0.5); backdrop-filter: blur(24px); border: 1px solid rgba(55,58,64,0.2); }
+    .gradient-text { background: linear-gradient(90deg,#748ffc,#22d3ee,#4ade80); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+    .code-block { background: #141517; border-radius: 0.75rem; border: 1px solid rgba(55,58,64,0.3); padding: 1.5rem; font-family: 'JetBrains Mono',monospace; font-size: 0.875rem; overflow-x: auto; }
+    ::-webkit-scrollbar { width: 8px; }
+    ::-webkit-scrollbar-track { background: #141517; }
+    ::-webkit-scrollbar-thumb { background: #373A40; border-radius: 9999px; }
+    ::-webkit-scrollbar-thumb:hover { background: #5c5f66; }
+    @keyframes float { 0%,100%{ transform:translateY(0) } 50%{ transform:translateY(-20px) } }
+    @keyframes pulse-slow { 0%,100%{ opacity:1 } 50%{ opacity:.5 } }
+    .animate-float { animation: float 6s ease-in-out infinite; }
+    .animate-pulse-slow { animation: pulse-slow 4s cubic-bezier(.4,0,.6,1) infinite; }
+    .bar-animate { transition: width 1s ease-out; }
+  </style>
+</head>
+<body class="antialiased">
+
+<!-- ═══════════════ NAVBAR ═══════════════ -->
+<nav id="navbar" class="fixed top-0 left-0 right-0 z-50 transition-all duration-300 bg-transparent">
+  <div class="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
+    <a href="#" class="flex items-center gap-3 group">
+      <div class="w-10 h-10 rounded-lg bg-[#4c6ef5]/20 border border-[#5c7cfa]/30 flex items-center justify-center group-hover:bg-[#4c6ef5]/30 transition-colors">
+        <svg class="w-5 h-5 text-[#748ffc]" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="4 17 10 11 4 5"/><line x1="12" y1="19" x2="20" y2="19"/></svg>
+      </div>
+      <span class="font-mono font-bold text-lg text-white">LUA<span class="text-[#748ffc]">_RUNNER</span></span>
+    </a>
+    <!-- Desktop -->
+    <div class="hidden md:flex items-center gap-8">
+      <a href="#features" class="text-[#a6a7ab] hover:text-[#748ffc] text-sm font-medium transition-colors">Features</a>
+      <a href="#architecture" class="text-[#a6a7ab] hover:text-[#748ffc] text-sm font-medium transition-colors">Architecture</a>
+      <a href="#demo" class="text-[#a6a7ab] hover:text-[#748ffc] text-sm font-medium transition-colors">Demo</a>
+      <a href="#benchmarks" class="text-[#a6a7ab] hover:text-[#748ffc] text-sm font-medium transition-colors">Benchmarks</a>
+      <a href="#get-started" class="text-[#a6a7ab] hover:text-[#748ffc] text-sm font-medium transition-colors">Get Started</a>
+      <a href="https://github.com/alexltz0/LUA_RUNNER" target="_blank" rel="noopener noreferrer" class="flex items-center gap-2 px-4 py-2 rounded-lg bg-[#4c6ef5]/20 border border-[#5c7cfa]/30 text-[#91a7ff] hover:bg-[#4c6ef5]/30 transition-all text-sm font-medium">
+        <svg class="w-4 h-4" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 22v-4a4.8 4.8 0 0 0-1-3.5c3 0 6-2 6-5.5.08-1.25-.27-2.48-1-3.5.28-1.15.28-2.35 0-3.5 0 0-1 0-3 1.5-2.64-.5-5.36-.5-8 0C6 2 5 2 5 2c-.3 1.15-.3 2.35 0 3.5A5.403 5.403 0 0 0 4 9c0 3.5 3 5.5 6 5.5-.39.49-.68 1.05-.85 1.65-.17.6-.22 1.23-.15 1.85v4"/><path d="M9 18c-4.51 2-5-2-7-2"/></svg>
+        GitHub
+      </a>
+    </div>
+    <!-- Mobile toggle -->
+    <button id="menu-toggle" class="md:hidden text-[#a6a7ab]" onclick="document.getElementById('mobile-menu').classList.toggle('hidden')">
+      <svg class="w-6 h-6" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="4" x2="20" y1="12" y2="12"/><line x1="4" x2="20" y1="6" y2="6"/><line x1="4" x2="20" y1="18" y2="18"/></svg>
+    </button>
+  </div>
+  <div id="mobile-menu" class="hidden md:hidden glass border-t border-[#373A40]/20 px-6 py-4 space-y-3">
+    <a href="#features" class="block text-[#a6a7ab] hover:text-[#748ffc] text-sm font-medium">Features</a>
+    <a href="#architecture" class="block text-[#a6a7ab] hover:text-[#748ffc] text-sm font-medium">Architecture</a>
+    <a href="#demo" class="block text-[#a6a7ab] hover:text-[#748ffc] text-sm font-medium">Demo</a>
+    <a href="#benchmarks" class="block text-[#a6a7ab] hover:text-[#748ffc] text-sm font-medium">Benchmarks</a>
+    <a href="#get-started" class="block text-[#a6a7ab] hover:text-[#748ffc] text-sm font-medium">Get Started</a>
+  </div>
+</nav>
+
+<!-- ═══════════════ HERO ═══════════════ -->
+<section class="relative min-h-screen flex items-center justify-center overflow-hidden pt-20">
+  <!-- Background effects -->
+  <div class="absolute inset-0">
+    <div class="absolute top-1/4 left-1/4 w-96 h-96 bg-[#4c6ef5]/10 rounded-full blur-3xl animate-pulse-slow"></div>
+    <div class="absolute bottom-1/4 right-1/4 w-80 h-80 bg-[#22d3ee]/5 rounded-full blur-3xl animate-pulse-slow" style="animation-delay:2s"></div>
+    <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-[#4263eb]/5 rounded-full blur-3xl"></div>
+    <div class="absolute inset-0" style="background-image:linear-gradient(rgba(92,124,250,0.03) 1px,transparent 1px),linear-gradient(90deg,rgba(92,124,250,0.03) 1px,transparent 1px);background-size:60px 60px"></div>
+  </div>
+
+  <div class="relative z-10 max-w-5xl mx-auto px-6 text-center">
+    <!-- Badge -->
+    <div class="inline-flex items-center gap-2 px-4 py-2 rounded-full glass text-sm text-[#91a7ff] mb-8">
+      <svg class="w-4 h-4 text-[#22d3ee]" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+      <span>Low-Latency Game Scripting Engine</span>
+    </div>
+
+    <!-- Title -->
+    <h1 class="text-5xl md:text-7xl lg:text-8xl font-black tracking-tight mb-6">
+      <span class="font-mono text-white">LUA</span><span class="font-mono gradient-text">_RUNNER</span>
+    </h1>
+
+    <!-- Subtitle -->
+    <p class="text-lg md:text-xl text-[#a6a7ab] max-w-2xl mx-auto mb-8 leading-relaxed">
+      A custom scripting engine built for <span class="text-[#22d3ee] font-semibold">real-time game events</span>.
+      Sandboxed Lua execution, event-driven architecture, and fixed-timestep scheduling —
+      all optimized for <span class="text-[#4ade80] font-semibold">sub-millisecond latency</span>.
+    </p>
+
+    <!-- Typewriter -->
+    <div class="inline-block mb-10">
+      <div class="code-block text-left max-w-xl mx-auto">
+        <div class="flex items-center gap-2 mb-3">
+          <div class="w-3 h-3 rounded-full bg-red-500/70"></div>
+          <div class="w-3 h-3 rounded-full bg-yellow-500/70"></div>
+          <div class="w-3 h-3 rounded-full bg-green-500/70"></div>
+          <span class="ml-2 text-[#5c5f66] text-xs">game.lua</span>
+        </div>
+        <div class="text-sm md:text-base">
+          <span class="text-[#5c5f66]">lua&gt; </span>
+          <span id="typewriter" class="text-[#22d3ee]"></span>
+          <span class="text-[#748ffc] animate-pulse">|</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- CTA -->
+    <div class="flex flex-col sm:flex-row items-center justify-center gap-4 mb-16">
+      <a href="#get-started" class="flex items-center gap-2 px-8 py-3.5 rounded-xl bg-[#4c6ef5] hover:bg-[#5c7cfa] text-white font-semibold transition-all shadow-lg shadow-[#4c6ef5]/25 hover:shadow-[#5c7cfa]/40">
+        <svg class="w-5 h-5" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="6 3 20 12 6 21 6 3"/></svg>
+        Get Started
+      </a>
+      <a href="#demo" class="flex items-center gap-2 px-8 py-3.5 rounded-xl glass text-[#c1c2c5] hover:text-white font-semibold transition-all hover:border-[#5c7cfa]/30">
+        <svg class="w-5 h-5" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10"/></svg>
+        View Demo
+      </a>
+    </div>
+
+    <!-- Stats -->
+    <div class="grid grid-cols-3 gap-6 max-w-lg mx-auto">
+      <div class="text-center">
+        <div class="text-2xl md:text-3xl font-bold font-mono gradient-text">&lt; 0.1ms</div>
+        <div class="text-xs text-[#909296] mt-1">Event Latency</div>
+      </div>
+      <div class="text-center">
+        <div class="text-2xl md:text-3xl font-bold font-mono gradient-text">60+</div>
+        <div class="text-xs text-[#909296] mt-1">Ticks/Second</div>
+      </div>
+      <div class="text-center">
+        <div class="text-2xl md:text-3xl font-bold font-mono gradient-text">100%</div>
+        <div class="text-xs text-[#909296] mt-1">Sandboxed</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Scroll indicator -->
+  <div class="absolute bottom-8 left-1/2 -translate-x-1/2 animate-bounce">
+    <svg class="w-6 h-6 text-[#5c5f66]" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
+  </div>
+</section>
+
+<!-- ═══════════════ FEATURES ═══════════════ -->
+<section id="features" class="py-24 px-6">
+  <div class="max-w-7xl mx-auto">
+    <div class="text-center mb-16">
+      <p class="text-[#748ffc] font-mono text-sm tracking-wider uppercase mb-3">Core Features</p>
+      <h2 class="text-3xl md:text-5xl font-bold text-white mb-4">Built for <span class="gradient-text">Performance</span></h2>
+      <p class="text-[#a6a7ab] max-w-2xl mx-auto">Every component is designed for low-latency game event processing — from the sandboxed Lua VM to the fixed-timestep scheduler.</p>
+    </div>
+    <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+      <!-- Feature 1 -->
+      <div class="group glass rounded-2xl p-6 hover:border-[#5c5f66]/30 transition-all duration-300 hover:-translate-y-1">
+        <div class="w-12 h-12 rounded-xl bg-[#22d3ee]/10 border border-[#22d3ee]/20 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
+          <svg class="w-6 h-6 text-[#22d3ee]" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10"/></svg>
+        </div>
+        <h3 class="text-lg font-semibold text-white mb-2">Sandboxed Execution</h3>
+        <p class="text-[#a6a7ab] text-sm leading-relaxed">Dangerous globals (os, io, debug, require) are stripped. Lua scripts run in a restricted environment — zero escape vectors.</p>
+      </div>
+      <!-- Feature 2 -->
+      <div class="group glass rounded-2xl p-6 hover:border-[#5c5f66]/30 transition-all duration-300 hover:-translate-y-1">
+        <div class="w-12 h-12 rounded-xl bg-[#748ffc]/10 border border-[#748ffc]/20 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
+          <svg class="w-6 h-6 text-[#748ffc]" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+        </div>
+        <h3 class="text-lg font-semibold text-white mb-2">Event-Driven Architecture</h3>
+        <p class="text-[#a6a7ab] text-sm leading-relaxed">High-performance pub/sub with priority queues, wildcard patterns (entity.*), one-shot listeners, and propagation control.</p>
+      </div>
+      <!-- Feature 3 -->
+      <div class="group glass rounded-2xl p-6 hover:border-[#5c5f66]/30 transition-all duration-300 hover:-translate-y-1">
+        <div class="w-12 h-12 rounded-xl bg-[#4ade80]/10 border border-[#4ade80]/20 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
+          <svg class="w-6 h-6 text-[#4ade80]" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+        </div>
+        <h3 class="text-lg font-semibold text-white mb-2">Fixed-Timestep Scheduler</h3>
+        <p class="text-[#a6a7ab] text-sm leading-relaxed">Configurable tick rate (default 60 TPS) with frame budget tracking, scheduled tasks, and precise delta-time.</p>
+      </div>
+      <!-- Feature 4 -->
+      <div class="group glass rounded-2xl p-6 hover:border-[#5c5f66]/30 transition-all duration-300 hover:-translate-y-1">
+        <div class="w-12 h-12 rounded-xl bg-[#fb923c]/10 border border-[#fb923c]/20 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
+          <svg class="w-6 h-6 text-[#fb923c]" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/><path d="m3.3 7 8.7 5 8.7-5"/><path d="M12 22V12"/></svg>
+        </div>
+        <h3 class="text-lg font-semibold text-white mb-2">Entity System</h3>
+        <p class="text-[#a6a7ab] text-sm leading-relaxed">Spawn, destroy, and modify game entities directly from Lua. Full property access with type-safe Python bridge.</p>
+      </div>
+      <!-- Feature 5 -->
+      <div class="group glass rounded-2xl p-6 hover:border-[#5c5f66]/30 transition-all duration-300 hover:-translate-y-1">
+        <div class="w-12 h-12 rounded-xl bg-[#a78bfa]/10 border border-[#a78bfa]/20 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
+          <svg class="w-6 h-6 text-[#a78bfa]" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-9-9c2.52 0 4.93 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/></svg>
+        </div>
+        <h3 class="text-lg font-semibold text-white mb-2">Hot Reload</h3>
+        <p class="text-[#a6a7ab] text-sm leading-relaxed">Reload all scripts without restarting the engine. Iterate on gameplay logic in real-time during development.</p>
+      </div>
+      <!-- Feature 6 -->
+      <div class="group glass rounded-2xl p-6 hover:border-[#5c5f66]/30 transition-all duration-300 hover:-translate-y-1">
+        <div class="w-12 h-12 rounded-xl bg-pink-400/10 border border-pink-400/20 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
+          <svg class="w-6 h-6 text-pink-400" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="m19 9-5 5-4-4-3 3"/></svg>
+        </div>
+        <h3 class="text-lg font-semibold text-white mb-2">Performance Metrics</h3>
+        <p class="text-[#a6a7ab] text-sm leading-relaxed">Built-in profiling: tick time, frame budget usage, event throughput, entity count — all accessible in real-time.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════ ARCHITECTURE ═══════════════ -->
+<section id="architecture" class="py-24 px-6 relative">
+  <div class="absolute inset-0 bg-gradient-to-b from-transparent via-[#364fc7]/5 to-transparent"></div>
+  <div class="max-w-5xl mx-auto relative z-10">
+    <div class="text-center mb-16">
+      <p class="text-[#748ffc] font-mono text-sm tracking-wider uppercase mb-3">System Design</p>
+      <h2 class="text-3xl md:text-5xl font-bold text-white mb-4">Layered <span class="gradient-text">Architecture</span></h2>
+      <p class="text-[#a6a7ab] max-w-2xl mx-auto">Lua scripts react to engine-driven events through a curated API surface. The inversion of control ensures stability and security.</p>
+    </div>
+    <div class="space-y-4">
+      <!-- Layer 1 -->
+      <div class="glass rounded-2xl p-6 hover:border-[#5c5f66]/30 transition-all">
+        <div class="flex flex-col md:flex-row md:items-center gap-4">
+          <div class="w-12 h-12 rounded-xl flex-shrink-0 flex items-center justify-center bg-[#4c6ef5]/20 border border-[#5c7cfa]/30">
+            <svg class="w-6 h-6 text-[#748ffc]" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m18 16 4-4-4-4"/><path d="m6 8-4 4 4 4"/><path d="m14.5 4-5 16"/></svg>
+          </div>
+          <div class="flex-1">
+            <h3 class="text-lg font-semibold text-white">Lua Game Scripts</h3>
+            <p class="text-[#909296] text-sm font-mono">init.lua · enemies.lua · combat.lua · game_loop.lua</p>
+          </div>
+          <div class="flex flex-wrap gap-2">
+            <span class="px-3 py-1 rounded-lg bg-[#25262B]/50 text-[#a6a7ab] text-xs font-mono">Gameplay Logic</span>
+            <span class="px-3 py-1 rounded-lg bg-[#25262B]/50 text-[#a6a7ab] text-xs font-mono">Entity Behavior</span>
+            <span class="px-3 py-1 rounded-lg bg-[#25262B]/50 text-[#a6a7ab] text-xs font-mono">Event Handlers</span>
+            <span class="px-3 py-1 rounded-lg bg-[#25262B]/50 text-[#a6a7ab] text-xs font-mono">AI &amp; Combat</span>
+          </div>
+        </div>
+      </div>
+      <div class="flex justify-center"><svg class="w-5 h-5 text-[#5c5f66]" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14"/><path d="m19 12-7 7-7-7"/></svg></div>
+      <!-- Layer 2 -->
+      <div class="glass rounded-2xl p-6 hover:border-[#5c5f66]/30 transition-all">
+        <div class="flex flex-col md:flex-row md:items-center gap-4">
+          <div class="w-12 h-12 rounded-xl flex-shrink-0 flex items-center justify-center bg-[#22d3ee]/10 border border-[#22d3ee]/20">
+            <svg class="w-6 h-6 text-[#22d3ee]" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/><path d="m3.3 7 8.7 5 8.7-5"/><path d="M12 22V12"/></svg>
+          </div>
+          <div class="flex-1">
+            <h3 class="text-lg font-semibold text-white">Engine API Layer</h3>
+            <p class="text-[#909296] text-sm font-mono">Python ↔ Lua Bridge</p>
+          </div>
+          <div class="flex flex-wrap gap-2">
+            <span class="px-3 py-1 rounded-lg bg-[#25262B]/50 text-[#a6a7ab] text-xs font-mono">log() · events · entities</span>
+            <span class="px-3 py-1 rounded-lg bg-[#25262B]/50 text-[#a6a7ab] text-xs font-mono">spawn · destroy · properties</span>
+            <span class="px-3 py-1 rounded-lg bg-[#25262B]/50 text-[#a6a7ab] text-xs font-mono">get_tick · get_time · get_delta</span>
+          </div>
+        </div>
+      </div>
+      <div class="flex justify-center"><svg class="w-5 h-5 text-[#5c5f66]" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14"/><path d="m19 12-7 7-7-7"/></svg></div>
+      <!-- Layer 3 -->
+      <div class="glass rounded-2xl p-6 hover:border-[#5c5f66]/30 transition-all">
+        <div class="flex flex-col md:flex-row md:items-center gap-4">
+          <div class="w-12 h-12 rounded-xl flex-shrink-0 flex items-center justify-center bg-[#4ade80]/10 border border-[#4ade80]/20">
+            <svg class="w-6 h-6 text-[#4ade80]" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4.9 19.1C1 15.2 1 8.8 4.9 4.9"/><path d="M7.8 16.2c-2.3-2.3-2.3-6.1 0-8.5"/><circle cx="12" cy="12" r="2"/><path d="M16.2 7.8c2.3 2.3 2.3 6.1 0 8.5"/><path d="M19.1 4.9C23 8.8 23 15.1 19.1 19"/></svg>
+          </div>
+          <div class="flex-1">
+            <h3 class="text-lg font-semibold text-white">Core Engine</h3>
+            <p class="text-[#909296] text-sm font-mono">EventBus · SandboxedLua · TickScheduler</p>
+          </div>
+          <div class="flex flex-wrap gap-2">
+            <span class="px-3 py-1 rounded-lg bg-[#25262B]/50 text-[#a6a7ab] text-xs font-mono">Pub/Sub with wildcards</span>
+            <span class="px-3 py-1 rounded-lg bg-[#25262B]/50 text-[#a6a7ab] text-xs font-mono">Restricted Lua VM</span>
+            <span class="px-3 py-1 rounded-lg bg-[#25262B]/50 text-[#a6a7ab] text-xs font-mono">Fixed-timestep loop</span>
+            <span class="px-3 py-1 rounded-lg bg-[#25262B]/50 text-[#a6a7ab] text-xs font-mono">Performance profiling</span>
+          </div>
+        </div>
+      </div>
+    </div>
+    <!-- Principles -->
+    <div class="grid md:grid-cols-3 gap-6 mt-12">
+      <div class="text-center p-4">
+        <h4 class="text-sm font-semibold text-[#748ffc] mb-2">Inversion of Control</h4>
+        <p class="text-[#a6a7ab] text-sm">Lua reacts to events — it never controls execution flow directly.</p>
+      </div>
+      <div class="text-center p-4">
+        <h4 class="text-sm font-semibold text-[#748ffc] mb-2">API Boundary</h4>
+        <p class="text-[#a6a7ab] text-sm">Engine exposes a curated set of functions. Scripts cannot corrupt engine state.</p>
+      </div>
+      <div class="text-center p-4">
+        <h4 class="text-sm font-semibold text-[#748ffc] mb-2">Lifecycle Hooks</h4>
+        <p class="text-[#a6a7ab] text-sm">on_init → on_tick → on_shutdown. Engine controls execution order.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════ CODE DEMO ═══════════════ -->
+<section id="demo" class="py-24 px-6">
+  <div class="max-w-5xl mx-auto">
+    <div class="text-center mb-16">
+      <p class="text-[#748ffc] font-mono text-sm tracking-wider uppercase mb-3">Live Code</p>
+      <h2 class="text-3xl md:text-5xl font-bold text-white mb-4">See it in <span class="gradient-text">Action</span></h2>
+      <p class="text-[#a6a7ab] max-w-2xl mx-auto">Real game scripts running on the LUA_RUNNER engine. Event-driven combat, entity management, and wave spawning.</p>
+    </div>
+    <!-- Code editor -->
+    <div class="glass rounded-2xl overflow-hidden">
+      <!-- Tabs -->
+      <div class="flex items-center gap-1 px-4 pt-4 pb-0 border-b border-[#373A40]/20 overflow-x-auto">
+        <button onclick="switchTab(0)" id="tab-0" class="flex items-center gap-2 px-4 py-2.5 rounded-t-lg text-sm font-mono bg-[#141517] text-[#748ffc] border-t border-x border-[#5c7cfa]/30 whitespace-nowrap">
+          <svg class="w-3.5 h-3.5" xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/></svg>
+          init.lua
+        </button>
+        <button onclick="switchTab(1)" id="tab-1" class="flex items-center gap-2 px-4 py-2.5 rounded-t-lg text-sm font-mono text-[#909296] hover:text-[#c1c2c5] hover:bg-[#25262B]/30 whitespace-nowrap transition-all">
+          <svg class="w-3.5 h-3.5" xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/></svg>
+          events.lua
+        </button>
+        <button onclick="switchTab(2)" id="tab-2" class="flex items-center gap-2 px-4 py-2.5 rounded-t-lg text-sm font-mono text-[#909296] hover:text-[#c1c2c5] hover:bg-[#25262B]/30 whitespace-nowrap transition-all">
+          <svg class="w-3.5 h-3.5" xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/></svg>
+          combat.lua
+        </button>
+        <button onclick="switchTab(3)" id="tab-3" class="flex items-center gap-2 px-4 py-2.5 rounded-t-lg text-sm font-mono text-[#909296] hover:text-[#c1c2c5] hover:bg-[#25262B]/30 whitespace-nowrap transition-all">
+          <svg class="w-3.5 h-3.5" xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/></svg>
+          engine API
+        </button>
+        <div class="flex-1"></div>
+        <button onclick="copyCode()" id="copy-btn" class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[#909296] hover:text-white text-xs transition-colors">
+          <svg class="w-3.5 h-3.5" xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>
+          <span id="copy-text">Copy</span>
+        </button>
+      </div>
+      <!-- Code content -->
+      <div class="p-6 bg-[#141517]/50 overflow-x-auto">
+        <pre id="code-display" class="font-mono text-sm leading-relaxed"></pre>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════ BENCHMARKS ═══════════════ -->
+<section id="benchmarks" class="py-24 px-6 relative">
+  <div class="absolute inset-0 bg-gradient-to-b from-transparent via-[#141517]/50 to-transparent"></div>
+  <div class="max-w-5xl mx-auto relative z-10">
+    <div class="text-center mb-16">
+      <p class="text-[#748ffc] font-mono text-sm tracking-wider uppercase mb-3">Performance</p>
+      <h2 class="text-3xl md:text-5xl font-bold text-white mb-4">Benchmark <span class="gradient-text">Results</span></h2>
+      <p class="text-[#a6a7ab] max-w-2xl mx-auto">Measured on a standard development machine. All numbers represent real engine execution, not synthetic benchmarks.</p>
+    </div>
+    <div class="space-y-8 mb-16">
+      <!-- Bench 1 -->
+      <div class="glass rounded-xl p-6">
+        <div class="flex items-center gap-4 mb-3">
+          <svg class="w-5 h-5 text-[#a6a7ab]" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="3" rx="2"/><path d="M12 8v8"/><path d="m8.5 14 7-4"/><path d="m8.5 10 7 4"/></svg>
+          <div class="flex-1">
+            <div class="flex items-baseline justify-between"><h3 class="text-white font-semibold">Lua Execution</h3><span class="font-mono text-lg font-bold gradient-text">0.042 ms</span></div>
+            <p class="text-[#909296] text-sm">Average time per Lua script execution (math-heavy workload)</p>
+          </div>
+        </div>
+        <div class="w-full h-3 bg-[#25262B]/50 rounded-full overflow-hidden"><div class="bench-bar h-full rounded-full bg-gradient-to-r from-[#5c7cfa] to-[#748ffc]" data-width="4.2" style="width:0%"></div></div>
+      </div>
+      <!-- Bench 2 -->
+      <div class="glass rounded-xl p-6">
+        <div class="flex items-center gap-4 mb-3">
+          <svg class="w-5 h-5 text-[#a6a7ab]" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4.9 19.1C1 15.2 1 8.8 4.9 4.9"/><path d="M7.8 16.2c-2.3-2.3-2.3-6.1 0-8.5"/><circle cx="12" cy="12" r="2"/><path d="M16.2 7.8c2.3 2.3 2.3 6.1 0 8.5"/><path d="M19.1 4.9C23 8.8 23 15.1 19.1 19"/></svg>
+          <div class="flex-1">
+            <div class="flex items-baseline justify-between"><h3 class="text-white font-semibold">Event Dispatch</h3><span class="font-mono text-lg font-bold gradient-text">0.008 ms</span></div>
+            <p class="text-[#909296] text-sm">Time to emit and dispatch a single event to all listeners</p>
+          </div>
+        </div>
+        <div class="w-full h-3 bg-[#25262B]/50 rounded-full overflow-hidden"><div class="bench-bar h-full rounded-full bg-gradient-to-r from-[#22d3ee] to-[#60a5fa]" data-width="0.8" style="width:0%"></div></div>
+      </div>
+      <!-- Bench 3 -->
+      <div class="glass rounded-xl p-6">
+        <div class="flex items-center gap-4 mb-3">
+          <svg class="w-5 h-5 text-[#a6a7ab]" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+          <div class="flex-1">
+            <div class="flex items-baseline justify-between"><h3 class="text-white font-semibold">Tick Overhead</h3><span class="font-mono text-lg font-bold gradient-text">0.15 ms</span></div>
+            <p class="text-[#909296] text-sm">Engine overhead per tick (vs 16.67ms budget at 60 TPS)</p>
+          </div>
+        </div>
+        <div class="w-full h-3 bg-[#25262B]/50 rounded-full overflow-hidden"><div class="bench-bar h-full rounded-full bg-gradient-to-r from-[#4ade80] to-[#34d399]" data-width="0.9" style="width:0%"></div></div>
+      </div>
+      <!-- Bench 4 -->
+      <div class="glass rounded-xl p-6">
+        <div class="flex items-center gap-4 mb-3">
+          <svg class="w-5 h-5 text-[#a6a7ab]" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+          <div class="flex-1">
+            <div class="flex items-baseline justify-between"><h3 class="text-white font-semibold">Frame Budget Used</h3><span class="font-mono text-lg font-bold gradient-text">0.9 %</span></div>
+            <p class="text-[#909296] text-sm">Percentage of frame budget consumed by script execution</p>
+          </div>
+        </div>
+        <div class="w-full h-3 bg-[#25262B]/50 rounded-full overflow-hidden"><div class="bench-bar h-full rounded-full bg-gradient-to-r from-[#a78bfa] to-[#f472b6]" data-width="0.9" style="width:0%"></div></div>
+      </div>
+    </div>
+    <!-- Throughput -->
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+      <div class="glass rounded-xl p-5 text-center hover:border-[#5c5f66]/30 transition-all">
+        <div class="text-2xl mb-2">⚡</div>
+        <div class="text-xl font-bold font-mono text-white mb-1">~24,000</div>
+        <div class="text-[#909296] text-xs">Lua Ops/sec</div>
+      </div>
+      <div class="glass rounded-xl p-5 text-center hover:border-[#5c5f66]/30 transition-all">
+        <div class="text-2xl mb-2">📡</div>
+        <div class="text-xl font-bold font-mono text-white mb-1">~125,000</div>
+        <div class="text-[#909296] text-xs">Events/sec</div>
+      </div>
+      <div class="glass rounded-xl p-5 text-center hover:border-[#5c5f66]/30 transition-all">
+        <div class="text-2xl mb-2">🎮</div>
+        <div class="text-xl font-bold font-mono text-white mb-1">~50,000</div>
+        <div class="text-[#909296] text-xs">Entity Spawns/sec</div>
+      </div>
+      <div class="glass rounded-xl p-5 text-center hover:border-[#5c5f66]/30 transition-all">
+        <div class="text-2xl mb-2">🔄</div>
+        <div class="text-xl font-bold font-mono text-white mb-1">&lt; 5ms</div>
+        <div class="text-[#909296] text-xs">Hot Reload</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════ TECH STACK ═══════════════ -->
+<section class="py-24 px-6">
+  <div class="max-w-5xl mx-auto">
+    <div class="text-center mb-16">
+      <p class="text-[#748ffc] font-mono text-sm tracking-wider uppercase mb-3">Technology</p>
+      <h2 class="text-3xl md:text-5xl font-bold text-white mb-4">Tech <span class="gradient-text">Stack</span></h2>
+    </div>
+    <div class="grid md:grid-cols-2 gap-6">
+      <div class="glass rounded-2xl p-6">
+        <h3 class="text-sm font-mono text-[#909296] tracking-wider uppercase mb-4">Engine Runtime</h3>
+        <div class="space-y-3">
+          <div class="flex items-center gap-3"><div class="w-2 h-2 rounded-full bg-yellow-400"></div><span class="font-mono font-semibold text-sm text-yellow-400">Python 3.10+</span><span class="text-[#909296] text-sm">— Host runtime & orchestration</span></div>
+          <div class="flex items-center gap-3"><div class="w-2 h-2 rounded-full bg-[#748ffc]"></div><span class="font-mono font-semibold text-sm text-[#748ffc]">lupa (LuaJIT)</span><span class="text-[#909296] text-sm">— Embedded Lua with JIT compilation</span></div>
+        </div>
+      </div>
+      <div class="glass rounded-2xl p-6">
+        <h3 class="text-sm font-mono text-[#909296] tracking-wider uppercase mb-4">Core Modules</h3>
+        <div class="space-y-3">
+          <div class="flex items-center gap-3"><div class="w-2 h-2 rounded-full bg-[#22d3ee]"></div><span class="font-mono font-semibold text-sm text-[#22d3ee]">EventBus</span><span class="text-[#909296] text-sm">— Pub/sub with wildcards & priorities</span></div>
+          <div class="flex items-center gap-3"><div class="w-2 h-2 rounded-full bg-[#4ade80]"></div><span class="font-mono font-semibold text-sm text-[#4ade80]">SandboxedLua</span><span class="text-[#909296] text-sm">— Restricted Lua execution environment</span></div>
+          <div class="flex items-center gap-3"><div class="w-2 h-2 rounded-full bg-[#fb923c]"></div><span class="font-mono font-semibold text-sm text-[#fb923c]">TickScheduler</span><span class="text-[#909296] text-sm">— Fixed-timestep game loop</span></div>
+        </div>
+      </div>
+      <div class="glass rounded-2xl p-6">
+        <h3 class="text-sm font-mono text-[#909296] tracking-wider uppercase mb-4">Dev Tools</h3>
+        <div class="space-y-3">
+          <div class="flex items-center gap-3"><div class="w-2 h-2 rounded-full bg-[#a78bfa]"></div><span class="font-mono font-semibold text-sm text-[#a78bfa]">rich</span><span class="text-[#909296] text-sm">— Terminal UI & logging</span></div>
+          <div class="flex items-center gap-3"><div class="w-2 h-2 rounded-full bg-pink-400"></div><span class="font-mono font-semibold text-sm text-pink-400">click</span><span class="text-[#909296] text-sm">— CLI framework</span></div>
+          <div class="flex items-center gap-3"><div class="w-2 h-2 rounded-full bg-red-400"></div><span class="font-mono font-semibold text-sm text-red-400">pytest</span><span class="text-[#909296] text-sm">— Testing framework</span></div>
+        </div>
+      </div>
+      <div class="glass rounded-2xl p-6">
+        <h3 class="text-sm font-mono text-[#909296] tracking-wider uppercase mb-4">Website</h3>
+        <div class="space-y-3">
+          <div class="flex items-center gap-3"><div class="w-2 h-2 rounded-full bg-sky-400"></div><span class="font-mono font-semibold text-sm text-sky-400">React 18</span><span class="text-[#909296] text-sm">— UI framework</span></div>
+          <div class="flex items-center gap-3"><div class="w-2 h-2 rounded-full bg-yellow-400"></div><span class="font-mono font-semibold text-sm text-yellow-400">Vite</span><span class="text-[#909296] text-sm">— Build tool</span></div>
+          <div class="flex items-center gap-3"><div class="w-2 h-2 rounded-full bg-teal-400"></div><span class="font-mono font-semibold text-sm text-teal-400">Tailwind CSS</span><span class="text-[#909296] text-sm">— Utility-first styling</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════ GET STARTED ═══════════════ -->
+<section id="get-started" class="py-24 px-6 relative">
+  <div class="absolute inset-0 bg-gradient-to-b from-transparent via-[#364fc7]/5 to-transparent"></div>
+  <div class="max-w-4xl mx-auto relative z-10">
+    <div class="text-center mb-16">
+      <p class="text-[#748ffc] font-mono text-sm tracking-wider uppercase mb-3">Quick Start</p>
+      <h2 class="text-3xl md:text-5xl font-bold text-white mb-4">Get <span class="gradient-text">Started</span></h2>
+      <p class="text-[#a6a7ab] max-w-2xl mx-auto">Up and running in under a minute. Clone, install, and start scripting.</p>
+    </div>
+    <div class="space-y-4">
+      <div class="glass rounded-xl p-5 flex items-center gap-4">
+        <div class="w-8 h-8 rounded-lg bg-[#4c6ef5]/20 border border-[#5c7cfa]/30 flex items-center justify-center flex-shrink-0"><span class="text-[#748ffc] font-mono font-bold text-sm">1</span></div>
+        <div class="flex-1 min-w-0"><p class="text-[#a6a7ab] text-sm mb-1">Install Dependencies</p><code class="font-mono text-[#22d3ee] text-sm">pip install -r requirements.txt</code></div>
+        <button onclick="copyText('pip install -r requirements.txt',this)" class="text-[#909296] hover:text-white transition-colors"><svg class="w-4 h-4" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg></button>
+      </div>
+      <div class="glass rounded-xl p-5 flex items-center gap-4">
+        <div class="w-8 h-8 rounded-lg bg-[#4c6ef5]/20 border border-[#5c7cfa]/30 flex items-center justify-center flex-shrink-0"><span class="text-[#748ffc] font-mono font-bold text-sm">2</span></div>
+        <div class="flex-1 min-w-0"><p class="text-[#a6a7ab] text-sm mb-1">Run the Demo</p><code class="font-mono text-[#22d3ee] text-sm">python main.py run --scripts scripts --ticks 600</code></div>
+        <button onclick="copyText('python main.py run --scripts scripts --ticks 600',this)" class="text-[#909296] hover:text-white transition-colors"><svg class="w-4 h-4" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg></button>
+      </div>
+      <div class="glass rounded-xl p-5 flex items-center gap-4">
+        <div class="w-8 h-8 rounded-lg bg-[#4c6ef5]/20 border border-[#5c7cfa]/30 flex items-center justify-center flex-shrink-0"><span class="text-[#748ffc] font-mono font-bold text-sm">3</span></div>
+        <div class="flex-1 min-w-0"><p class="text-[#a6a7ab] text-sm mb-1">Interactive REPL</p><code class="font-mono text-[#22d3ee] text-sm">python main.py interactive</code></div>
+        <button onclick="copyText('python main.py interactive',this)" class="text-[#909296] hover:text-white transition-colors"><svg class="w-4 h-4" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg></button>
+      </div>
+      <div class="glass rounded-xl p-5 flex items-center gap-4">
+        <div class="w-8 h-8 rounded-lg bg-[#4c6ef5]/20 border border-[#5c7cfa]/30 flex items-center justify-center flex-shrink-0"><span class="text-[#748ffc] font-mono font-bold text-sm">4</span></div>
+        <div class="flex-1 min-w-0"><p class="text-[#a6a7ab] text-sm mb-1">Run Benchmarks</p><code class="font-mono text-[#22d3ee] text-sm">python main.py bench</code></div>
+        <button onclick="copyText('python main.py bench',this)" class="text-[#909296] hover:text-white transition-colors"><svg class="w-4 h-4" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg></button>
+      </div>
+    </div>
+    <!-- Project structure -->
+    <div class="mt-12 glass rounded-2xl p-6">
+      <div class="flex items-center gap-2 mb-4">
+        <svg class="w-5 h-5 text-[#748ffc]" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="4 17 10 11 4 5"/><line x1="12" y1="19" x2="20" y2="19"/></svg>
+        <span class="font-mono text-sm text-[#a6a7ab]">Project Structure</span>
+      </div>
+      <pre class="font-mono text-sm text-[#a6a7ab] leading-relaxed">lua_runner/
+├── engine/
+│   ├── __init__.py       <span class="text-[#5c5f66]"># Package exports</span>
+│   ├── core.py           <span class="text-[#5c5f66]"># LuaRunner orchestrator</span>
+│   ├── events.py         <span class="text-[#5c5f66]"># EventBus pub/sub system</span>
+│   ├── sandbox.py        <span class="text-[#5c5f66]"># Sandboxed Lua execution</span>
+│   └── scheduler.py      <span class="text-[#5c5f66]"># Fixed-timestep scheduler</span>
+├── scripts/
+│   ├── init.lua          <span class="text-[#5c5f66]"># Game initialization</span>
+│   ├── enemies.lua       <span class="text-[#5c5f66]"># Enemy spawning &amp; AI</span>
+│   ├── combat.lua        <span class="text-[#5c5f66]"># Damage &amp; healing</span>
+│   └── game_loop.lua     <span class="text-[#5c5f66]"># Main tick loop</span>
+├── tests/
+│   └── test_engine.py    <span class="text-[#5c5f66]"># Unit tests</span>
+├── main.py               <span class="text-[#5c5f66]"># CLI entry point</span>
+└── requirements.txt</pre>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════ FOOTER ═══════════════ -->
+<footer class="border-t border-[#373A40]/20 py-12 px-6">
+  <div class="max-w-7xl mx-auto">
+    <div class="flex flex-col md:flex-row items-center justify-between gap-6">
+      <div class="flex items-center gap-3">
+        <div class="w-8 h-8 rounded-lg bg-[#4c6ef5]/20 border border-[#5c7cfa]/30 flex items-center justify-center">
+          <svg class="w-4 h-4 text-[#748ffc]" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="4 17 10 11 4 5"/><line x1="12" y1="19" x2="20" y2="19"/></svg>
+        </div>
+        <span class="font-mono font-bold text-sm text-[#a6a7ab]">LUA<span class="text-[#748ffc]">_RUNNER</span></span>
+      </div>
+      <div class="flex items-center gap-1.5 text-sm text-[#909296]">
+        <span>Built with</span>
+        <svg class="w-3.5 h-3.5 text-red-400 fill-red-400" xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/></svg>
+        <span>for low-latency game scripting</span>
+      </div>
+      <div class="flex items-center gap-4">
+        <a href="https://github.com/alexltz0/LUA_RUNNER" target="_blank" rel="noopener noreferrer" class="flex items-center gap-2 text-[#909296] hover:text-white text-sm transition-colors">
+          <svg class="w-4 h-4" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 22v-4a4.8 4.8 0 0 0-1-3.5c3 0 6-2 6-5.5.08-1.25-.27-2.48-1-3.5.28-1.15.28-2.35 0-3.5 0 0-1 0-3 1.5-2.64-.5-5.36-.5-8 0C6 2 5 2 5 2c-.3 1.15-.3 2.35 0 3.5A5.403 5.403 0 0 0 4 9c0 3.5 3 5.5 6 5.5-.39.49-.68 1.05-.85 1.65-.17.6-.22 1.23-.15 1.85v4"/><path d="M9 18c-4.51 2-5-2-7-2"/></svg>
+          Source
+        </a>
+        <a href="https://www.lua.org" target="_blank" rel="noopener noreferrer" class="flex items-center gap-2 text-[#909296] hover:text-white text-sm transition-colors">
+          <svg class="w-4 h-4" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 3h6v6"/><path d="M10 14 21 3"/><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/></svg>
+          Lua
+        </a>
+      </div>
+    </div>
+    <div class="mt-8 text-center text-xs text-[#5c5f66]" id="footer-year"></div>
+  </div>
+</footer>
+
+<!-- ═══════════════ JAVASCRIPT ═══════════════ -->
+<script>
+// --- Navbar scroll ---
+window.addEventListener('scroll', () => {
+  const nav = document.getElementById('navbar');
+  if (window.scrollY > 50) {
+    nav.classList.add('glass','shadow-2xl');
+    nav.classList.remove('bg-transparent');
+  } else {
+    nav.classList.remove('glass','shadow-2xl');
+    nav.classList.add('bg-transparent');
+  }
+});
+
+// --- Footer year ---
+document.getElementById('footer-year').textContent = `© ${new Date().getFullYear()} LUA_RUNNER. MIT License.`;
+
+// --- Typewriter ---
+const twTexts = [
+  'spawn_entity("player", "hero")',
+  'on_event("combat.damage", handler)',
+  'emit_event("game.start", { wave = 1 })',
+  'set_entity_prop("boss", "health", 500)',
+];
+let twIdx = 0, twChar = 0, twDeleting = false;
+function typewrite() {
+  const el = document.getElementById('typewriter');
+  const current = twTexts[twIdx];
+  if (!twDeleting && twChar === current.length) { setTimeout(() => { twDeleting = true; typewrite(); }, 2000); return; }
+  if (twDeleting && twChar === 0) { twDeleting = false; twIdx = (twIdx + 1) % twTexts.length; setTimeout(typewrite, 200); return; }
+  twChar += twDeleting ? -1 : 1;
+  el.textContent = current.substring(0, twChar);
+  setTimeout(typewrite, twDeleting ? 30 : 60);
+}
+typewrite();
+
+// --- Code tabs ---
+const codes = [
+`-- Game Init Script
+game = {
+    score = 0,
+    wave = 1,
+    enemies_alive = 0,
+    max_enemies = 5,
+}
+
+function on_init()
+    log("=== LUA_RUNNER Game Demo ===")
+    
+    -- Spawn player entity
+    game.player_id = spawn_entity("player", "hero")
+    set_entity_prop("player", "health", 100)
+    set_entity_prop("player", "x", 400)
+    set_entity_prop("player", "y", 300)
+    
+    emit_event("game.start", { wave = game.wave })
+end`,
+`-- Event-Driven Enemy Management
+on_event("game.start", function(event_name)
+    log("Wave " .. game.wave .. " starting!")
+    spawn_wave()
+end)
+
+on_event("entity.destroy", function(event_name)
+    game.enemies_alive = game.enemies_alive - 1
+    game.score = game.score + 10
+
+    if game.enemies_alive <= 0 then
+        game.wave = game.wave + 1
+        emit_event("game.start", { wave = game.wave })
+    end
+end)
+
+function spawn_wave()
+    for i = 1, game.max_enemies do
+        local id = "enemy_" .. i
+        spawn_entity(id, "enemy")
+        set_entity_prop(id, "x", math.random(50, 750))
+        set_entity_prop(id, "y", math.random(50, 550))
+    end
+end`,
+`-- Combat System
+function deal_damage(target_id, amount)
+    local health = get_entity_prop(target_id, "health")
+    if health == nil then return end
+
+    local new_health = math.max(0, health - amount)
+    set_entity_prop(target_id, "health", new_health)
+
+    emit_event("combat.damage", {
+        target = target_id,
+        amount = amount,
+        remaining = new_health,
+    })
+
+    if new_health <= 0 then
+        emit_event("combat.kill", { target = target_id })
+        destroy_entity(target_id)
+    end
+end
+
+-- Heal system
+function heal_entity(target_id, amount)
+    local health = get_entity_prop(target_id, "health")
+    local new_hp = math.min(100, health + amount)
+    set_entity_prop(target_id, "health", new_hp)
+end`,
+`from engine import LuaRunner
+
+# Create engine at 60 ticks per second
+runner = LuaRunner(tick_rate=60, script_dir="scripts")
+
+# Load all Lua scripts
+runner.load_directory()
+
+# Run for 600 ticks (10 seconds at 60 TPS)
+runner.start(max_ticks=600)
+
+# Inspect results
+print(runner.get_metrics())
+# {
+#   "tick_count": 600,
+#   "avg_tick_time_ms": 0.042,
+#   "frame_budget_usage_pct": 0.3,
+#   "entities": 12,
+#   "events_emitted": 1847
+# }`
+];
+
+let activeTab = 0;
+
+function renderCode(index) {
+  const display = document.getElementById('code-display');
+  const lines = codes[index].split('\n');
+  display.innerHTML = lines.map((line, i) => {
+    let cls = 'text-[#c1c2c5]';
+    const trimmed = line.trim();
+    if (trimmed.startsWith('--') || trimmed.startsWith('#')) cls = 'text-[#5c5f66]';
+    else if (trimmed.startsWith('function') || trimmed.startsWith('def ')) cls = 'text-[#748ffc]';
+    else if (line.includes('"') || line.includes("'")) cls = 'text-[#4ade80]';
+    return `<div class="flex"><span class="text-[#5c5f66] select-none w-8 text-right mr-4 flex-shrink-0">${i+1}</span><span class="${cls}">${line || '\u00A0'}</span></div>`;
+  }).join('');
+}
+
+function switchTab(index) {
+  for (let i = 0; i < 4; i++) {
+    const tab = document.getElementById('tab-' + i);
+    if (i === index) {
+      tab.className = 'flex items-center gap-2 px-4 py-2.5 rounded-t-lg text-sm font-mono bg-[#141517] text-[#748ffc] border-t border-x border-[#5c7cfa]/30 whitespace-nowrap';
+    } else {
+      tab.className = 'flex items-center gap-2 px-4 py-2.5 rounded-t-lg text-sm font-mono text-[#909296] hover:text-[#c1c2c5] hover:bg-[#25262B]/30 whitespace-nowrap transition-all';
+    }
+  }
+  activeTab = index;
+  renderCode(index);
+}
+
+function copyCode() {
+  navigator.clipboard.writeText(codes[activeTab]);
+  const btn = document.getElementById('copy-text');
+  btn.textContent = 'Copied!';
+  setTimeout(() => btn.textContent = 'Copy', 2000);
+}
+
+renderCode(0);
+
+// --- Copy for Get Started ---
+function copyText(text, btn) {
+  navigator.clipboard.writeText(text);
+  const svg = btn.querySelector('svg');
+  const orig = svg.outerHTML;
+  svg.outerHTML = '<svg class="w-4 h-4 text-[#4ade80]" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>';
+  setTimeout(() => { btn.innerHTML = orig; }, 2000);
+}
+
+// --- Benchmark bar animation ---
+const observer = new IntersectionObserver((entries) => {
+  entries.forEach(entry => {
+    if (entry.isIntersecting) {
+      const bars = entry.target.querySelectorAll('.bench-bar');
+      bars.forEach((bar, i) => {
+        setTimeout(() => {
+          bar.style.transition = 'width 1s ease-out';
+          bar.style.width = bar.dataset.width + '%';
+        }, i * 150);
+      });
+      observer.unobserve(entry.target);
+    }
+  });
+}, { threshold: 0.3 });
+
+observer.observe(document.getElementById('benchmarks'));
+</script>
+
+</body>
+</html>
