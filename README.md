@@ -2,6 +2,8 @@
 
 **Custom scripting engine optimized for low-latency game events.**
 
+🌐 **Portfolio & Docs:** [https://alexltz0.github.io/LUA_RUNNER/](https://alexltz0.github.io/LUA_RUNNER/)
+
 A Python-based game scripting engine that embeds Lua (via LuaJIT) for high-performance, event-driven game logic. Features a sandboxed execution environment, a pub/sub event bus, fixed-timestep scheduling, and a complete entity management API.
 
 ---
